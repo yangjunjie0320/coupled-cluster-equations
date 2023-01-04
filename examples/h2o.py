@@ -153,8 +153,6 @@ if __name__ == "__main__":
     t1e_ref, t2e_ref = gccsd.transpose_ov_to_vo(nocc, nvir, amp_ov=(t1e_ov_ref, t2e_ov_ref))
     amp_vo_ref = (t1e_ref, t2e_ref)
 
-    cc_obj.verbose = 5
-    cc_obj.conv_tol_normt = 1e-8
     l1e_ov_ref, l2e_ov_ref = cc_obj.solve_lambda(eris=eris, t1=t1e_ov_ref, t2=t2e_ov_ref)
     l1e_ref, l2e_ref = gccsd.transpose_ov_to_vo(nocc, nvir, amp_ov=(l1e_ov_ref, l2e_ov_ref))
     lam_vo_ref = (l1e_ref, l2e_ref)
@@ -176,22 +174,11 @@ if __name__ == "__main__":
 
     
     l1e, l2e = gccsd.solve_gccsd_lambda(
-        h1e, h2e, 
+        h1e, h2e, lam=None,
         amp=(t1e_ref, t2e_ref),
-        lam=(l1e_ref, l2e_ref),
-        verbose=4, 
+        verbose=4, tol=1e-8,
         max_cycle=50,
-        tol=1e-8
         )
 
     print("error l1e: %6.4e" % numpy.linalg.norm(l1e - l1e_ref))
     print("error l2e: %6.4e" % numpy.linalg.norm(l2e - l2e_ref))
-
-    r1e  = gccsd_lam_rhs1e(h1e, h2e, t1e, t2e, l1e_ov_ref, l2e_ov_ref)
-    r1e += gccsd_lam_lhs1e(h1e, h2e, t1e, t2e, l1e_ov_ref, l2e_ov_ref)
-    print("error r1e: %6.4e" % numpy.linalg.norm(r1e))
-
-    r2e  = gccsd_lam_rhs2e(h1e, h2e, t1e, t2e, l1e_ov_ref, l2e_ov_ref)
-    r2e += gccsd_lam_lhs2e(h1e, h2e, t1e, t2e, l1e_ov_ref, l2e_ov_ref)
-    print("error r2e: %6.4e" % numpy.linalg.norm(r2e))
-
