@@ -41,9 +41,12 @@ ERIS_VO_9 = {
 }
 
 def g_aint_full(eris):
+    import cqcpy, numpy
+    from cqcpy.ov_blocks import two_e_blocks_full
+
     nb = eris.nb
     na = eris.na
-    C = utils.block_diag(eris.ca, eris.cb)
+    C = cqcpy.utils.block_diag(eris.ca, eris.cb)
     U = eris.umat()
     Ua = U - U.transpose((0,1,3,2))
     Ua_mo = numpy.einsum('pqrs,pw,qx,ry,sz->wxyz',Ua,C,C,C,C)
@@ -88,49 +91,20 @@ def space_idx_formatter(name, space_list):
     return s
 
 def einsum_str_formatter(sstr, istr, fstr, tstr):
-    istr_list = istr.split(",")[:-1]
-    tstr_list = tstr.split(",")[1:]
+    """Format the einsum string to the format that can be used in the code.
+    If the tstr is longer than 3 terms, optimize will be set to True.
+    """
+    einsum_str = "\'" + istr[:-1] + "->" + fstr + "\'"
 
-    nt = len(istr_list)
-    assert nt == len(istr_list)
-    assert nt == len(tstr_list)
+    opt = "optimize = False"
+    istr_split = istr.split(",")[:-1]
+    if len(istr_split) >= 3:
+        opt = "optimize = True"
+    elif len(istr_split) == 2:
+        if len(istr_split[0]) == 4 and len(istr_split[1]) == 4:
+            opt = "optimize = True"
 
-    istr_list_new = []
-    tstr_list_new = []
-
-    for idx_t, istr_t, tstr_t in zip(range(nt), istr_list, tstr_list):
-        tstr_t_split = tstr_t.split(".")
-        
-        if len(tstr_t_split) == 2:
-            eris_idx = ERIS_VO_9.get(tstr_t_split[-1], None)
-            if eris_idx is not None:
-                sign_t, permu_t = eris_idx
-
-                if sign_t == -1:
-                    tstr_t_new = " -" + tstr_t_split[0].strip() + "." + "".join([tstr_t_split[1][i] for i in permu_t])
-                else:
-                    tstr_t_new = tstr_t_split[0] + "." + "".join([tstr_t_split[1][i] for i in permu_t])
-                istr_t_new = "".join([istr_t[i] for i in permu_t])
-
-                istr_list_new.append(istr_t_new)
-                tstr_list_new.append(tstr_t_new)
-            
-            else:
-                istr_list_new.append(istr_t)
-                tstr_list_new.append(tstr_t)
-
-        elif len(tstr_t_split) == 1:
-            istr_list_new.append(istr_t)
-            tstr_list_new.append(tstr_t)
-        
-        else:
-            raise ValueError("The tstr is not valid.")
-
-    istr = ",".join(istr_list_new) 
-    tstr = "," + ",".join(tstr_list_new)
-    
-    einsum_str = "\'" + istr + "->" + fstr + "\'"
-    return f"{float(sstr): 12.6f} * einsum({einsum_str:20s}{tstr})"
+    return f"{float(sstr): 12.6f} * einsum({einsum_str:20s}{tstr}, {opt})"
 
 def gen_eris_vo_dict(sym=9):
     """Convert all the eris blocks to the vo format,
