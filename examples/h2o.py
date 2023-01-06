@@ -77,6 +77,65 @@ def get_ghf_h1e_h2e(mf=None):
 
     return fock_blocks, eris_blocks
 
+def test_dres_dt(h1e, h2e, t1e, t2e, verbose=3, dt=1e-6):
+    from cceqs.gccsd._gccsd_amp_eqs import gccsd_ene
+    from cceqs.gccsd._gccsd_amp_eqs import gccsd_r1e
+    from cceqs.gccsd._gccsd_amp_eqs import gccsd_r2e
+    from cceqs.gccsd._gccsd_lam_eqs import gccsd_lam_lhs1e
+    from cceqs.gccsd._gccsd_lam_eqs import gccsd_lam_lhs2e
+
+    from pyscf.lib import logger
+
+    log = logger.new_logger(sys.stdout, verbose)
+
+    nv, no  = t1e.shape
+    vec_amp = gccsd.amp_to_vec_vo(no, nv, amp_vo=(t1e, t2e))
+
+    dr_dt_fd = numpy.zeros((vec_amp.size, vec_amp.size))
+    dr_dt_an = numpy.zeros((vec_amp.size, vec_amp.size))
+
+    # import pdb
+    # pdb.set_trace()
+    
+    for amp_idx in range(vec_amp.size):
+        vec_fd = numpy.zeros_like(vec_amp)
+        vec_fd[amp_idx] = dt
+
+        t1e_1, t2e_1 = gccsd.vec_to_amp_vo(no, nv, vec_amp + vec_fd)
+        r1e_1 = gccsd_r1e(h1e, h2e, t1e_1, t2e_1)
+        r2e_1 = gccsd_r2e(h1e, h2e, t1e_1, t2e_1)
+
+        t1e_2, t2e_2 = gccsd.vec_to_amp_vo(no, nv, vec_amp - vec_fd)
+        r1e_2 = gccsd_r1e(h1e, h2e, t1e_2, t2e_2)
+        r2e_2 = gccsd_r2e(h1e, h2e, t1e_2, t2e_2)
+
+        dr1e_dt_fd = (r1e_1 - r1e_2) / (2.0 * dt)
+        dr2e_dt_fd = (r2e_1 - r2e_2) / (2.0 * dt)
+
+        vec_drdt_fd  = gccsd.amp_to_vec_vo(no, nv, amp_vo=(dr1e_dt_fd, dr2e_dt_fd))
+        dr_dt_fd[amp_idx, :] = vec_drdt_fd
+
+    for res_idx in range(vec_amp.size):
+        vec_lam = numpy.zeros_like(vec_amp)
+        vec_lam[res_idx] = 1.0
+
+        l1e_ov, l2e_ov = gccsd.vec_to_amp_ov(no, nv, vec_lam)
+        lhs1e = gccsd_lam_lhs1e(h1e, h2e, t1e, t2e, l1e_ov, l2e_ov)
+        lhs2e = gccsd_lam_lhs2e(h1e, h2e, t1e, t2e, l1e_ov, l2e_ov)
+
+        dr1e_dt_an = lhs1e
+        dr2e_dt_an = lhs2e
+
+        vec_drdt_an = gccsd.amp_to_vec_ov(no, nv, amp_ov=(dr1e_dt_an, dr2e_dt_an))
+        dr_dt_an[:, res_idx] = vec_drdt_an
+
+    log.debug("dt = %6.4e, err = %6.4e" % (dt, numpy.linalg.norm(dr_dt_fd - dr_dt_an)))
+    dump_rec(sys.stdout, dr_dt_fd[:10, :10])
+    dump_rec(sys.stdout, dr_dt_an[:10, :10])
+    print("dr_dt_fd - dr_dt_fd.T = ", numpy.linalg.norm(dr_dt_fd - dr_dt_fd.T))
+    assert 1 == 2
+    assert numpy.linalg.norm(dr_dt_fd - dr_dt_an) < dt
+
 def profile_gccsd_amp_eqs(h1e, h2e, t1e, t2e):
     import numpy, sys, line_profiler
     from pyscf.lib import logger
@@ -182,3 +241,7 @@ if __name__ == "__main__":
 
     print("error l1e: %6.4e" % numpy.linalg.norm(l1e - l1e_ref))
     print("error l2e: %6.4e" % numpy.linalg.norm(l2e - l2e_ref))
+
+    test_dres_dt(h1e, h2e, t1e, t2e, dt=1e-1, verbose=5)
+    test_dres_dt(h1e, h2e, t1e, t2e, dt=1e-4, verbose=5)
+    test_dres_dt(h1e, h2e, t1e, t2e, dt=1e-6, verbose=5)
