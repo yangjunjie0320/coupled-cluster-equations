@@ -25,7 +25,7 @@ def vec_to_amp_vo(no, nv, v=None):
     assert t2e_ov.shape == (no, no, nv, nv)
     amp_ov = (t1e_ov, t2e_ov)
 
-    t1e_vo, t2e_vo = transpose_ov_to_vo(no, nv, amp_ov)
+    t1e_vo, t2e_vo = _transpose_ov_to_vo(no, nv, amp_ov)
     assert t1e_vo.shape == (nv, no)
     assert t2e_vo.shape == (nv, nv, no, no)
     return t1e_vo, t2e_vo
@@ -35,13 +35,13 @@ def amp_to_vec_vo(no, nv, amp_vo=None):
     assert t1e_vo.shape == (nv, no)
     assert t2e_vo.shape == (nv, nv, no, no)
 
-    t1e_ov, t2e_ov = transpose_vo_to_ov(no, nv, amp_vo)
+    t1e_ov, t2e_ov = _transpose_vo_to_ov(no, nv, amp_vo)
     assert t1e_ov.shape == (no, nv)
     assert t2e_ov.shape == (no, no, nv, nv)
     v = amplitudes_to_vector_ov(t1e_ov, t2e_ov)
     return v
 
-def transpose_ov_to_vo(no, nv, amp_ov=None):
+def _transpose_ov_to_vo(no, nv, amp_ov=None):
     t1e_ov, t2e_ov = amp_ov
     assert t1e_ov.shape == (no, nv)
     assert t2e_ov.shape == (no, no, nv, nv)
@@ -50,7 +50,7 @@ def transpose_ov_to_vo(no, nv, amp_ov=None):
     t2e_vo = t2e_ov.transpose(2, 3, 0, 1)
     return t1e_vo, t2e_vo
 
-def transpose_vo_to_ov(no, nv, amp_vo=None):
+def _transpose_vo_to_ov(no, nv, amp_vo=None):
     t1e_vo, t2e_vo = amp_vo
     assert t1e_vo.shape == (nv, no)
     assert t2e_vo.shape == (nv, nv, no, no)
@@ -185,7 +185,7 @@ def solve_gccsd_lambda(h1e, h2e, amp=None, lam=None, max_cycle=50, tol=1e-8, ver
 
     def res(x):
         l1e_vo, l2e_vo = vec_to_amp_vo(nocc, nvir, x)
-        l1e_ov, l2e_ov = transpose_vo_to_ov(nocc, nvir, (l1e_vo, l2e_vo))
+        l1e_ov, l2e_ov = _transpose_vo_to_ov(nocc, nvir, (l1e_vo, l2e_vo))
 
         r1e_ov  = gccsd_lam_lhs1e(h1e, h2e, t1e, t2e, l1e_ov, l2e_ov)
         r1e_ov += gccsd_lam_rhs1e(h1e, h2e, t1e, t2e, l1e_ov, l2e_ov)
@@ -193,7 +193,7 @@ def solve_gccsd_lambda(h1e, h2e, amp=None, lam=None, max_cycle=50, tol=1e-8, ver
         r2e_ov  = gccsd_lam_lhs2e(h1e, h2e, t1e, t2e, l1e_ov, l2e_ov)
         r2e_ov += gccsd_lam_rhs2e(h1e, h2e, t1e, t2e, l1e_ov, l2e_ov)
 
-        r1e_vo, r2e_vo = transpose_ov_to_vo(nocc, nvir, (r1e_ov, r2e_ov))
+        r1e_vo, r2e_vo = _transpose_ov_to_vo(nocc, nvir, (r1e_ov, r2e_ov))
         r = amp_to_vec_vo(nocc, nvir, (r1e_vo, r2e_vo))
         return r
 
