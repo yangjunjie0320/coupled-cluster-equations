@@ -120,7 +120,7 @@ def profile_gccsd_lam_eqs(h1e, h2e, t1e, t2e):
     nv, no = t1e.shape
     l1e_vo = t1e.copy()
     l2e_vo = t2e.copy()
-    l1e_ov, l2e_ov = gccsd.transpose_vo_to_ov(no, nv, (l1e_vo, l2e_vo))
+    l1e_ov, l2e_ov = gccsd._transpose_vo_to_ov(no, nv, (l1e_vo, l2e_vo))
 
     def func(h1e, h2e, t1e, t2e):
         gccsd_lam_rhs1e(h1e, h2e, t1e, t2e, l1e_ov, l2e_ov)
@@ -162,11 +162,11 @@ if __name__ == "__main__":
     print("Reference total energy = % 12.8f" % (mf.energy_elec()[0] + ene_cor_ref))
     nocc, nvir = t1e_ov_ref.shape
 
-    t1e_ref, t2e_ref = gccsd._transpose_ov_to_vo(nocc, nvir, amp_ov=(t1e_ov_ref, t2e_ov_ref))
+    t1e_ref, t2e_ref = gccsd._transpose_ov_to_vo(nocc, nvir, amp=(t1e_ov_ref, t2e_ov_ref))
     amp_vo_ref = (t1e_ref, t2e_ref)
 
     l1e_ov_ref, l2e_ov_ref = cc_obj.solve_lambda(eris=eris, t1=t1e_ov_ref, t2=t2e_ov_ref)
-    l1e_ref, l2e_ref = gccsd._transpose_ov_to_vo(nocc, nvir, amp_ov=(l1e_ov_ref, l2e_ov_ref))
+    l1e_ref, l2e_ref = gccsd._transpose_ov_to_vo(nocc, nvir, amp=(l1e_ov_ref, l2e_ov_ref))
     lam_vo_ref = (l1e_ref, l2e_ref)
 
     from cceqs.gccsd._gccsd_lam_eqs import gccsd_lam_rhs1e, gccsd_lam_lhs1e
@@ -176,24 +176,22 @@ if __name__ == "__main__":
     profile_gccsd_amp_eqs(h1e, h2e, t1e_ref, t2e_ref)
     profile_gccsd_lam_eqs(h1e, h2e, t1e_ref, t2e_ref)
 
-    ene_tot, ene_cor, (t1e, t2e) = gccsd.solve_gccsd(
-        h1e, h2e, verbose=4, 
-        amp=None, max_cycle=50, tol=1e-8
-        )
+    cc_obj = gccsd.GCCSD(h1e, h2e, verbose=4)
+    ene_tot, ene_cor, (t1e, t2e) = cc_obj.kernel(amp=None)
 
     print("error t1e: %6.4e" % numpy.linalg.norm(t1e - t1e_ref))
     print("error t2e: %6.4e" % numpy.linalg.norm(t2e - t2e_ref))
     print("error ene: %6.4e" % abs(ene_cor - ene_cor_ref))
 
-    l1e, l2e = gccsd.solve_gccsd_lambda(
-        h1e, h2e, lam=None,
-        amp=(t1e_ref, t2e_ref),
-        verbose=4, tol=1e-8,
-        max_cycle=50,
-        )
+    # l1e, l2e = gccsd.solve_gccsd_lambda(
+    #     h1e, h2e, lam=None,
+    #     amp=(t1e_ref, t2e_ref),
+    #     verbose=4, tol=1e-8,
+    #     max_cycle=50,
+    #     )
 
-    print("error l1e: %6.4e" % numpy.linalg.norm(l1e - l1e_ref))
-    print("error l2e: %6.4e" % numpy.linalg.norm(l2e - l2e_ref))
+    # print("error l1e: %6.4e" % numpy.linalg.norm(l1e - l1e_ref))
+    # print("error l2e: %6.4e" % numpy.linalg.norm(l2e - l2e_ref))
 
-    test_dr_dt(h1e, h2e, t1e_ref, t2e_ref, verbose=5, random_amp=False)
-    test_dr_dt(h1e, h2e, t1e_ref, t2e_ref, verbose=5, random_amp=True)
+    # test_dr_dt(h1e, h2e, t1e_ref, t2e_ref, verbose=5, random_amp=False)
+    # test_dr_dt(h1e, h2e, t1e_ref, t2e_ref, verbose=5, random_amp=True)

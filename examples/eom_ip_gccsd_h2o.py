@@ -56,16 +56,37 @@ if __name__ == "__main__":
     mf = scf.GHF(mol)
     mf.kernel()
 
+    cc_obj = cc.GCCSD(mf)
+    cc_obj.kernel()
+
+    nroots = 5
+    enes_ref, rhvs_ref = cc_obj.ipccsd(nroots=nroots)
+
     from cceqs.gccsd.gccsd        import solve_gccsd
     from cceqs.gccsd.eom_ip_gccsd import solve_eom_ip_gccsd
     h1e, h2e = get_ghf_h1e_h2e(mf)
+    no, nv   = h1e.ov.shape
     ene_tot, ene_cor, (t1e, t2e) = solve_gccsd(
-        h1e, h2e, verbose=4, 
+        h1e, h2e, verbose=0, 
         amp=None, max_cycle=50, tol=1e-8
         )
 
-    solve_eom_ip_gccsd(
-        h1e, h2e, amp=(t1e, t2e), r_ip=None, 
-        max_cycle=50, tol=1e-8, 
-        nroots=5, max_space=20, verbose=3
+    enes, rhvs = solve_eom_ip_gccsd(
+        h1e, h2e, amp=(t1e, t2e), rhvs=None, 
+        max_cycle=50, tol=1e-10, 
+        max_space=nroots * 10, 
+        nroots=nroots, verbose=4
         )
+
+    from pyscf.tools.dump_mat import dump_rec
+    from cceqs.gccsd.eom_ip_gccsd import vec_to_amp_ip_vo
+    print("\nIP reference energies:")
+    for i in range(nroots):
+        r1e_ip_ref, r2e_ip_ref = vec_to_amp_ip_vo(no, nv, rhvs_ref[i])
+        r1e_ip, r2e_ip         = vec_to_amp_ip_vo(no, nv, rhvs[i])
+
+        dot  = abs(numpy.dot(rhvs_ref[i], rhvs[i]))
+        print("Root %2d ene = %10.8f, err = %6.4e %6.4e" % (
+            i, enes[i], abs(enes[i] - enes_ref[i]), abs(1.0 - dot)
+            ))
+        
