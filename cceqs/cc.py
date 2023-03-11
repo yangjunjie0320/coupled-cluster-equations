@@ -81,8 +81,8 @@ class CoupledClusterAmplitudeSolverMixin(lib.StreamObject):
         log.timer('\nTime to solve coupled-cluster amplitude equations', *cput0)
 
         log.info('\nFinal correlation energy   = % 12.8f', ene_sol - ene_hf)
-        log.info('Final total energy         = % 12.8f', ene_sol)
-        log.info('Final residual norm        = % 12.4e', numpy.linalg.norm(res_func(vec_sol, verbose=False)))
+        log.info('Final total energy           = % 12.8f', ene_sol)
+        log.info('Final residual norm          = % 12.4e', numpy.linalg.norm(res_func(vec_sol, verbose=False)))
 
         return ene_sol, ene_sol - ene_hf, amp_sol
 

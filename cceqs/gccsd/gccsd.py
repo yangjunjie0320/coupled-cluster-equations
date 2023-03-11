@@ -97,12 +97,10 @@ class AmplitudeSolver(CoupledClusterAmplitudeSolverMixin):
             r2e = gccsd_r2e(h1e, h2e, t1e, t2e)
             res = self.res_to_vec((r1e, r2e))
 
-            nonlocal iter_ccsd
-
             if verbose:
                 log.info('CCSD iter %4d, energy = %12.8f, residual = %12.4e',
                         iter_ccsd, ene_cor, numpy.linalg.norm(res))
-                iter_ccsd += 1
+            iter_ccsd += 1
 
             return res
 
